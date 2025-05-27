@@ -1,16 +1,62 @@
 "use client"
 
 import type React from "react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Upload, CheckCircle, AlertCircle } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Upload, CheckCircle, AlertCircle, LogOut } from "lucide-react"
 
 export default function AdminPage() {
+  const router = useRouter()
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+
+  // Check authentication status on component mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/check')
+        if (response.ok) {
+          setIsAuthenticated(true)
+        } else {
+          router.push('/login')
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error)
+        router.push('/login')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    checkAuth()
+  }, [router])
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+      router.push('/login')
+    } catch (error) {
+      console.error('Logout failed:', error)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900"></div>
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return null
+  }
 
   const handleFileUpload = async (week: "week1" | "week2", file: File) => {
     setUploading(true)
@@ -53,9 +99,15 @@ export default function AdminPage() {
     <main className="min-h-screen py-20">
       <div className="container mx-auto px-4">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl lg:text-4xl font-bold text-center text-gray-900 mb-16">
-            Administrace - Nahrávání jídelních lístků
-          </h1>
+          <div className="flex justify-between items-center mb-8">
+            <h1 className="text-3xl lg:text-4xl font-bold text-gray-900">
+              Administrace - Nahrávání jídelních lístků
+            </h1>
+            <Button variant="outline" onClick={handleLogout} className="flex items-center">
+              <LogOut className="h-4 w-4 mr-2" />
+              Odhlásit se
+            </Button>
+          </div>
 
           {message && (
             <div

@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -12,14 +11,26 @@ import { Phone, Mail, MapPin, User } from "lucide-react"
 import { useLanguage } from "@/lib/language-context"
 import { PhotoGallery } from "./photo-gallery"
 
+interface FormData {
+  name: string
+  email: string
+  phone: string
+  message: string
+  gdprConsent: boolean
+}
+
 export function Contact() {
   const { t } = useLanguage()
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     name: "",
     email: "",
     phone: "",
     message: "",
+    gdprConsent: false,
   })
+  
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [formError, setFormError] = useState("")
 
   const contacts = [
     {
@@ -113,6 +124,14 @@ export function Contact() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setFormError("")
+    
+    if (!formData.gdprConsent) {
+      setFormError("Pro odeslání zprávy je nutný souhlas se zpracováním osobních údajů.")
+      return
+    }
+
+    setIsSubmitting(true)
 
     try {
       const response = await fetch("/api/contact", {
@@ -123,21 +142,38 @@ export function Contact() {
         body: JSON.stringify(formData),
       })
 
-      if (response.ok) {
-        alert("Zpráva byla úspěšně odeslána!")
-        setFormData({ name: "", email: "", phone: "", message: "" })
-      } else {
-        alert("Chyba při odesílání zprávy.")
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Chyba při odesílání zprávy.")
       }
+
+      // Reset form on success
+      setFormData({ 
+        name: "", 
+        email: "", 
+        phone: "", 
+        message: "",
+        gdprConsent: false 
+      })
+      
+      alert("Zpráva byla úspěšně odeslána! Brzy vás budeme kontaktovat.")
     } catch (error) {
-      alert("Chyba při odesílání zprávy.")
+      console.error("Chyba při odesílání zprávy:", error)
+      setFormError(error instanceof Error ? error.message : "Nastala neočekávaná chyba. Zkuste to prosím znovu později.")
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const target = e.target as HTMLInputElement
+    const value = target.type === 'checkbox' ? target.checked : target.value
+    const name = target.name as keyof FormData
+    
     setFormData((prev) => ({
       ...prev,
-      [e.target.name]: e.target.value,
+      [name]: value,
     }))
   }
 
@@ -235,9 +271,61 @@ export function Contact() {
                       required
                     />
                   </div>
-                  <Button type="submit" className="w-full bg-gray-900 hover:bg-gray-800">
-                    {t("sendMessage")}
-                  </Button>
+                  <div className="space-y-4">
+                    {/* GDPR Consent Checkbox */}
+                    <div className="flex items-start space-x-2">
+                      <div className="flex items-center h-5">
+                        <input
+                          id="gdprConsent"
+                          name="gdprConsent"
+                          type="checkbox"
+                          checked={formData.gdprConsent}
+                          onChange={handleChange}
+                          className="h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
+                        />
+                      </div>
+                      <div className="text-sm">
+                        <label htmlFor="gdprConsent" className="font-medium text-gray-700">
+                          Odesláním formuláře souhlasíte s {" "}
+                          <a 
+                            href="/gdpr" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-gray-900 underline hover:text-gray-700"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            zpracováním osobních údajů
+                          </a>{" "}pro účely vyřízení vašeho dotazu.
+                        </label>
+                      </div>
+                    </div>
+                    
+                    {/* Form Error */}
+                    {formError && (
+                      <div className="text-red-600 text-sm p-3 bg-red-50 rounded-md">
+                        {formError}
+                      </div>
+                    )}
+                    
+                    {/* Submit Button */}
+                    <Button 
+                      type="submit" 
+                      className="w-full bg-gray-900 hover:bg-gray-800"
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Odesílám...
+                        </>
+                      ) : (
+                        t("sendMessage")
+                      )}
+                    </Button>
+                  </div>
                 </form>
               </CardContent>
             </Card>
@@ -261,7 +349,7 @@ export function Contact() {
                   {/* Mapa */}
                   <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center">
                     <iframe
-                      src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2624.9916256937595!2d14.6519!3d48.9419!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x4771573c8c8c8c8d%3A0x8c8c8c8c8c8c8c8c!2sVod%C3%A1rensk%C3%A1%2097%2C%20373%2012%20Borovany!5e0!3m2!1scs!2scz!4v1234567890"
+                      src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2624.9916256937595!2d14.64218035305494!3d48.90466846474977!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x4771573c8c8c8c8d%3A0x8c8c8c8c8c8c8c8c!2sVod%C3%A1rensk%C3%A1%2097%2C%20373%2012%20Borovany!5e0!3m2!1scs!2scz!4v1234567890"
                       width="100%"
                       height="100%"
                       style={{ border: 0 }}

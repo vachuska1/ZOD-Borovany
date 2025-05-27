@@ -48,14 +48,36 @@ export function Navbar() {
           <div className="flex items-center space-x-4">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="font-medium">
-                  {language.toUpperCase()}
+                <Button variant="ghost" size="icon" className="w-10 h-10 p-0">
+                  <img 
+                    src={`/images/flags/${language === 'cz' ? 'czech-republic' : language === 'en' ? 'united-kingdom' : 'germany'}.png`}
+                    alt={language.toUpperCase()}
+                    className="w-6 h-6 object-contain"
+                  />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => setLanguage("cz")}>CZ</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setLanguage("en")}>EN</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setLanguage("de")}>DE</DropdownMenuItem>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem 
+                  onClick={() => setLanguage("cz")}
+                  className="flex items-center gap-2 text-base"
+                >
+                  <img src="/images/flags/czech-republic.png" alt="CZ" className="w-5 h-5" />
+                  <span>Čeština</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => setLanguage("en")}
+                  className="flex items-center gap-2 text-base"
+                >
+                  <img src="/images/flags/united-kingdom.png" alt="EN" className="w-5 h-5" />
+                  <span>English</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => setLanguage("de")}
+                  className="flex items-center gap-2 text-base"
+                >
+                  <img src="/images/flags/germany.png" alt="DE" className="w-5 h-5" />
+                  <span>Deutsch</span>
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
